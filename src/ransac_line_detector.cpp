@@ -22,7 +22,7 @@ namespace ransac_line_detector
 
         ransac = std::make_shared<RANSAC>(max_iter_, threshold_);
 
-        marker.header.frame_id = "base_link";
+        marker.header.frame_id = "camera_link";
         marker.type = visualization_msgs::msg::Marker::LINE_STRIP;
         marker.action = visualization_msgs::msg::Marker::ADD;
         marker.scale.x = 0.1;
@@ -38,6 +38,7 @@ namespace ransac_line_detector
     {
         pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
         pcl::fromROSMsg(*msg, *cloud);
+        marker.points.clear();
 
         auto marker_array = visualization_msgs::msg::MarkerArray();
 
@@ -92,7 +93,7 @@ namespace ransac_line_detector
         geometry_msgs::msg::Point p1;
         p1.x = p.x;
         p1.y = p.y;
-        p1.z = p.z;
+        p1.z = 0.0;
 
         return p1;
     }
