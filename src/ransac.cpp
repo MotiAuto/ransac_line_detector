@@ -8,21 +8,21 @@ namespace ransac_line_detector
         threshold_ = threshold;
     }
 
-    LineModel RANSAC::segment(const sensor_msgs::msg::PointCloud& pointcloud)
+    LineModel RANSAC::segment(const pcl::PointCloud<pcl::PointXYZ>::Ptr cloud)
     {
         LineModel best_model;
         int max_inlier = 0;
 
         for(int i = 0; i < max_iteration_; i++)
         {
-            int id1 = rand() % pointcloud.points.size();
-            int id2 = rand() % pointcloud.points.size();
+            int id1 = rand() % cloud->size();
+            int id2 = rand() % cloud->size();
             if(id1 == id2) continue;
 
-            LineModel line = computeLine(pointcloud.points[id1], pointcloud.points[id2]);
+            LineModel line = computeLine(cloud->at(id1), cloud->at(id2));
 
             int inlier = 0;
-            for(const auto& p : pointcloud.points)
+            for(const auto& p : *cloud)
             {
                 if(point2lineDistance(p, line) < threshold_)
                 {
@@ -40,7 +40,7 @@ namespace ransac_line_detector
         return best_model;
     }
 
-    LineModel computeLine(const geometry_msgs::msg::Point32& p1, const geometry_msgs::msg::Point32& p2)
+    LineModel computeLine(const pcl::PointXYZ& p1, const pcl::PointXYZ& p2)
     {
         LineModel line;
         line.a = p2.y - p1.y;
@@ -50,7 +50,7 @@ namespace ransac_line_detector
         return line;
     }
 
-    double point2lineDistance(const geometry_msgs::msg::Point32& p, const LineModel& line)
+    double point2lineDistance(const pcl::PointXYZ& p, const LineModel& line)
     {
         const auto v1 = std::abs(line.a * p.x + line.b * p.y + line.c);
         const auto v2 = std::sqrt(line.a*line.a + line.b*line.b);

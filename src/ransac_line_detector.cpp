@@ -4,9 +4,10 @@ namespace ransac_line_detector
 {
     RansacLineDetector::RansacLineDetector(const rclcpp::NodeOptions& option): Node("RansacLineDetector", option)
     {
+        rclcpp::QoS qos_settings = rclcpp::QoS(rclcpp::KeepLast(10)).best_effort();
         sub_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
             "/pointcloud",
-            rclcpp::SystemDefaultsQoS(),
+            qos_settings,
             std::bind(&RansacLineDetector::topic_callback, this, _1)
         );
 
@@ -21,7 +22,7 @@ namespace ransac_line_detector
 
         ransac = std::make_shared<RANSAC>(max_iter_, threshold_);
 
-        marker.header.frame_id = "odom";
+        marker.header.frame_id = "base_link";
         marker.type = visualization_msgs::msg::Marker::LINE_STRIP;
         marker.action = visualization_msgs::msg::Marker::ADD;
         marker.scale.x = 0.1;
@@ -35,20 +36,20 @@ namespace ransac_line_detector
 
     void RansacLineDetector::topic_callback(const sensor_msgs::msg::PointCloud2::SharedPtr msg)
     {
-        sensor_msgs::msg::PointCloud pointcloud;
-        sensor_msgs::convertPointCloud2ToPointCloud(*msg, pointcloud);
+        pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
+        pcl::fromROSMsg(*msg, *cloud);
 
         auto marker_array = visualization_msgs::msg::MarkerArray();
 
         for(int i = 0; i < detect_num; i++)
         {
-            geometry_msgs::msg::Point32 line_start, line_end;
-            auto line = ransac->segment(pointcloud);
+            pcl::PointXYZ line_start, line_end;
+            auto line = ransac->segment(cloud);
 
-            PointCloudControl(line, 0.1, &pointcloud, &line_start, &line_end);
+            PointCloudControl(line, 0.1, cloud, &line_start, &line_end);
 
-            marker.points.push_back(Point32toPoint(line_start));
-            marker.points.push_back(Point32toPoint(line_end));
+            marker.points.push_back(PCLtoPoint(line_start));
+            marker.points.push_back(PCLtoPoint(line_end));
 
             marker_array.markers.push_back(marker);
         }
@@ -56,16 +57,17 @@ namespace ransac_line_detector
         pub_->publish(marker_array);
     }
 
-    void PointCloudControl(const LineModel &line, const double &threshold, sensor_msgs::msg::PointCloud *pointcloud, geometry_msgs::msg::Point32 *start, geometry_msgs::msg::Point32 *end)
+    void PointCloudControl(const LineModel &line, const double &threshold, pcl::PointCloud<pcl::PointXYZ>::Ptr pointcloud, pcl::PointXYZ *start, pcl::PointXYZ *end)
     {
-        sensor_msgs::msg::PointCloud result;
-        geometry_msgs::msg::Point32 max, min;
+        pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
 
-        for(const auto& p : pointcloud->points)
+        pcl::PointXYZ max, min;
+
+        for(const auto& p : *pointcloud)
         {
             if(point2lineDistance(p, line) > threshold)
             {
-                result.points.push_back(p);
+                cloud->push_back(p);
             }
             else
             {
@@ -80,12 +82,12 @@ namespace ransac_line_detector
             }
         }
 
-        pointcloud->points = result.points;
+        pointcloud = cloud;
         *start = min;
         *end = max;
     }
 
-    geometry_msgs::msg::Point Point32toPoint(const geometry_msgs::msg::Point32 &p)
+    geometry_msgs::msg::Point PCLtoPoint(const pcl::PointXYZ &p)
     {
         geometry_msgs::msg::Point p1;
         p1.x = p.x;

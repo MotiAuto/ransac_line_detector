@@ -5,8 +5,6 @@
 
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
-#include <sensor_msgs/msg/point_cloud.hpp>
-#include <sensor_msgs/point_cloud_conversion.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
 #include <visualization_msgs/msg/marker.hpp>
 #include <geometry_msgs/msg/point32.hpp>
@@ -36,9 +34,9 @@ namespace ransac_line_detector
         std::string frame_id;
     };
 
-    void PointCloudControl(const LineModel &line, const double &threshold, sensor_msgs::msg::PointCloud *pointcloud, geometry_msgs::msg::Point32 *start, geometry_msgs::msg::Point32 *end);
+    void PointCloudControl(const LineModel &line, const double &threshold, pcl::PointCloud<pcl::PointXYZ>::Ptr pointcloud, pcl::PointXYZ *start, pcl::PointXYZ *end);
 
-    geometry_msgs::msg::Point Point32toPoint(const geometry_msgs::msg::Point32 &p);
+    geometry_msgs::msg::Point PCLtoPoint(const pcl::PointXYZ &p);
 }
 
 #endif
